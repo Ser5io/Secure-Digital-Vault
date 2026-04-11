@@ -7,26 +7,26 @@ INSERT INTO Users (username, password_hash) VALUES
 
 -- ملفات سارة (Sarah_Admin) - ملفات إدارة ونظام
 INSERT INTO Files (user_id, original_name, stored_name, file_path, file_size, encryption_iv, file_hash) VALUES 
-(1, 'System_Config.xml', 'enc_001.dat', 'C:/Data/001.dat', 102400, NULL, '0x9876543210FEDCBA9876543210FEDCBA'), -- 100KB
-(1, 'Admin_Report_Q1.pdf', 'enc_002.dat', 'C:/Data/002.dat', 5242880, NULL, '0xABCDEF1234567890ABCDEF1234567890'); -- 5MB
+(1, 'System_Config.xml', 'enc_001.dat', 'C:/Data/001.dat', 102400, 0x9876543210FEDCBA9876543210FEDCBA, 'ha1'), -- 100KB
+(1, 'Admin_Report_Q1.pdf', 'enc_002.dat', 'C:/Data/002.dat', 5242880, 0xABCDEF1234567890ABCDEF1234567890, 'ha2'); -- 5MB
 
 -- ملفات عمر (Omar_User) - ملفات شخصية
 INSERT INTO Files (user_id, original_name, stored_name, file_path, file_size, encryption_iv, file_hash) VALUES 
-(2, 'My_Photo.jpg', 'enc_003.dat', 'C:/Data/003.dat', 2097152, NULL, '0x1A2B3C4D5E6F708192A3B4C5D6E7F809'), -- 2MB
-(2, 'Reading_List.txt', 'enc_004.dat', 'C:/Data/004.dat', 5120, NULL, '0xFFFF0000AAAA5555EEEE1111BBBB2222'); -- 5KB
+(2, 'My_Photo.jpg', 'enc_003.dat', 'C:/Data/003.dat', 2097152, 0x1A2B3C4D5E6F708192A3B4C5D6E7F809, 'ho1'), -- 2MB
+(2, 'Reading_List.txt', 'enc_004.dat', 'C:/Data/004.dat', 5120, 0xFFFF0000AAAA5555EEEE1111BBBB2222, 'ho2'); -- 5KB
 
 -- ملفات ليلى (Laila_Dev) - ملفات برمجة (كبيرة)
 INSERT INTO Files (user_id, original_name, stored_name, file_path, file_size, encryption_iv, file_hash) VALUES 
-(3, 'Source_Code_v1.zip', 'enc_005.dat', 'C:/Data/005.dat', 15728640, NULL, '0x01230123012301230123012301230123'), -- 15MB
-(3, 'Database_Dump.sql', 'enc_006.dat', 'C:/Data/006.dat', 104857600, NULL, '0xDEADBEEFCAFEBABE1234567890ABCDEF'); -- 100MB
+(3, 'Source_Code_v1.zip', 'enc_005.dat', 'C:/Data/005.dat', 15728640, 0x01230123012301230123012301230123, 'hl1'), -- 15MB
+(3, 'Database_Dump.sql', 'enc_006.dat', 'C:/Data/006.dat', 104857600, 0xDEADBEEFCAFEBABE1234567890ABCDEF, 'hl2'); -- 100MB
 
 -- ملفات يارا (Yara_Manager) - ملفات مالية
 INSERT INTO Files (user_id, original_name, stored_name, file_path, file_size, encryption_iv, file_hash) VALUES 
-(4, 'Budget_2026.xlsx', 'enc_007.dat', 'C:/Data/007.dat', 3145728, NULL, '0x8A7B6C5D4E3F21098A7B6C5D4E3F2109'); -- 3MB
+(4, 'Budget_2026.xlsx', 'enc_007.dat', 'C:/Data/007.dat', 3145728, 0x8A7B6C5D4E3F21098A7B6C5D4E3F2109, 'hy1'); -- 3MB
 
 -- ملفات أحمد (Ahmed_Guest) - ملف واحد بسيط
 INSERT INTO Files (user_id, original_name, stored_name, file_path, file_size, encryption_iv, file_hash) VALUES 
-(5, 'Welcome_Guide.pdf', 'enc_008.dat', 'C:/Data/008.dat', 1048576, NULL, '0x5555AAAA5555AAAA5555AAAA5555AAAA'); -- 1MB
+(5, 'Welcome_Guide.pdf', 'enc_008.dat', 'C:/Data/008.dat', 1048576, 0x5555AAAA5555AAAA5555AAAA5555AAAA, 'ha_g1'); -- 1MB
 
 INSERT INTO Access_Logs (user_id, action, status, ip_address) VALUES 
 (1, 'login', 'Success', '192.168.1.1'),   -- سارة دخلت
