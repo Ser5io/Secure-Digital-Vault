@@ -37,7 +37,7 @@ CREATE TABLE Access_Logs (
 GO -- تفصل بين إنشاء الجداول وإنشاء البروسيدجرز
 
 -- 1. إضافة مستخدم جديد (Register)
-CREATE OR ALTER PROCEDURE sp_AddUser
+CREATE OR ALTER PROCEDURE sp_RegisterUser
     @username NVARCHAR(50),
     @password_hash NVARCHAR(255)
 AS
