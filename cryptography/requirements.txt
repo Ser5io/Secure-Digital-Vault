@@ -1,0 +1,5 @@
+# Requirements for Cryptographic Engine
+
+cryptography>=41.0.0
+pytest>=7.0.0
+pytest-cov>=4.1.0

@@ -7,7 +7,6 @@ class UserAuthenticator:
         self.cursor = None
 
         if connection_string is None:
-            # Added "Initial Catalog" which is another way to say "Database"
             self.conn_str = (
                 "Driver={ODBC Driver 17 for SQL Server};"
                 "Server=localhost;"
@@ -18,28 +17,30 @@ class UserAuthenticator:
             self.conn_str = connection_string
         
         try:
-            self.conn = pyodbc.connect(self.conn_str)
+            self.conn = pyodbc.connect(self.conn_str, autocommit=True)
             self.cursor = self.conn.cursor()
             self.cursor.execute("USE AlMakhzan")
-            print("✅ Database connected successfully.")
+            print("✅ UserAuthenticator: Connected to AlMakhzan.")
         except Exception as e:
             print(f"❌ Connection Error: {e}")
             self.conn = None
 
     def register_user(self, username, email, password):
-        if not self.cursor: return False
+        if not self.cursor: return False, "No connection"
+        if not username.strip() or not password.strip(): return False, "Empty fields"
+        
+        self.cursor.execute("SELECT id FROM AlMakhzan.dbo.Users WHERE username = ?", (username,))
+        if self.cursor.fetchone(): return False, "the username is used"
+
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         try:
             self.cursor.execute("{CALL AlMakhzan.dbo.sp_RegisterUser (?, ?)}", (username, hashed_password.decode('utf-8')))
-            self.conn.commit()
-            print(f"✅ User {username} registered.")
-            return True
+            return True, "Success"
         except Exception as e:
-            print(f"Registration Error: {e}")
-            return False
+            return False, str(e)
 
     def authenticate(self, identifier, password):
-        if not self.cursor: return False, None
+        if not self.cursor: return False, None, "No connection"
         try:
             query = "SELECT id, password_hash FROM AlMakhzan.dbo.Users WHERE username = ?"
             self.cursor.execute(query, (identifier,))
@@ -48,60 +49,33 @@ class UserAuthenticator:
             if result:
                 user_id = int(result[0])
                 stored_hash = result[1].encode('utf-8')
-                
                 if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-                    print(f"🔓 Password correct for ID: {user_id}")
-                    # Log Success
                     self._log_access(user_id, 'login', 'Success')
-                    return True, user_id
+                    return True, user_id, "Login successful"
                 else:
-                    # Log Failed
                     self._log_access(user_id, 'login', 'Failed')
-            return False, None
+                    return False, None, "Incorrect password!"
+            return False, None, "User not found!"
         except Exception as e:
-            print(f"Authentication Error: {e}")
-            return False, None
+            return False, None, str(e)
 
     def _log_access(self, user_id, action, status):
-        """
-        Records the activity using the new sp_AddLogEntry name.
-        """
-        if not self.cursor: return
         try:
             ip_address = "127.0.0.1" 
-            print(f"📝 Logging {action} for User {user_id}...")
-            
-            # Use the NEW procedure name
             self.cursor.execute("{CALL AlMakhzan.dbo.sp_AddLogEntry (?, ?, ?, ?)}", 
                                 (user_id, action, status, ip_address))
-            self.conn.commit()
-            print("✅ Log entry successfully saved.")
-        except Exception as e:
-            print(f"❌ LOGGING FAILED: {e}")
+        except: pass
 
-    def get_all_logs(self):
-        if not self.cursor: return
+    def get_user_salt(self, user_id):
+        self.cursor.execute("SELECT password_hash FROM AlMakhzan.dbo.Users WHERE id = ?", (user_id,))
+        result = self.cursor.fetchone()
+        return result[0][:29] if result else None
+
+    def list_user_files(self, user_id):
+        """Fixed: Fetch files specifically from our database."""
         try:
-            # Check the table directly in our database
-            self.cursor.execute("SELECT TOP 5 * FROM AlMakhzan.dbo.Access_Logs ORDER BY timestamp DESC")
-            rows = self.cursor.fetchall()
-            print("\n--- RECENT DATABASE LOGS ---")
-            for row in rows:
-                print(f"LogID: {row[0]} | UserID: {row[1]} | Action: {row[2]} | Status: {row[3]} | Time: {row[5]}")
+            self.cursor.execute("{CALL AlMakhzan.dbo.sp_GetMyFiles (?)}", (user_id,))
+            return self.cursor.fetchall()
         except Exception as e:
-            print(f"Error reading logs: {e}")
-
-if __name__ == "__main__":
-    auth = UserAuthenticator()
-    # Test with a user
-    test_user = "yousefk" 
-    test_pass = "SecurePass123"
-    
-    success, uid = auth.authenticate(test_user, test_pass)
-    
-    if success:
-        print("✅ Login Success!")
-    else:
-        print("❌ Login Failed!")
-        
-    auth.get_all_logs()
+            print(f"❌ Error fetching files: {e}")
+            return []

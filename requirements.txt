@@ -1,2 +1,18 @@
-bcrypt
-pyodbc
+# --- Core Backend & API ---
+Flask==3.0.0
+Werkzeug==3.0.1
+flask-limiter==3.5.0
+flask-cors==4.0.0
+
+# --- Database Connectivity ---
+pyodbc==5.0.1
+
+# --- Security & Identity ---
+bcrypt==4.1.2
+PyJWT==2.8.0
+
+# --- Cryptography ---
+cryptography==41.0.7
+
+# --- Testing ---
+pytest==7.4.3
