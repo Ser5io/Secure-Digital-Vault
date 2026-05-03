@@ -17,7 +17,6 @@ class VaultFileManager:
 
     def _get_connection(self):
         conn = pyodbc.connect(self.conn_str, autocommit=True)
-        conn.cursor().execute("USE AlMakhzan")
         return conn
 
     def save_file(self, user_id, original_name, encrypted_data, iv, file_hash, ip_address="127.0.0.1"):
@@ -29,6 +28,7 @@ class VaultFileManager:
             
         file_size = os.path.getsize(full_path)
 
+        conn = None
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
@@ -38,31 +38,34 @@ class VaultFileManager:
             cursor.execute("{CALL AlMakhzan.dbo.sp_SecureUpload (?, ?, ?, ?, ?, ?, ?, ?)}", 
                 (user_id, original_name, stored_name, full_path, file_size, binary_iv, file_hash, ip_address))
             
-            conn.close()
             return True
         except Exception as e:
             print(f"❌ DB Save Error: {e}")
             return False
+        finally:
+            if conn: conn.close()
 
     def list_user_files(self, user_id):
+        conn = None
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("{CALL AlMakhzan.dbo.sp_GetMyFiles (?)}", (user_id,))
             files = cursor.fetchall()
-            conn.close()
             return files
         except Exception as e:
             print(f"❌ Retrieval Error: {e}")
             return []
+        finally:
+            if conn: conn.close()
 
     def get_file_data(self, file_id):
+        conn = None
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT file_path, encryption_iv, original_name FROM AlMakhzan.dbo.Files WHERE file_id = ?", (file_id,))
             row = cursor.fetchone()
-            conn.close()
             if row:
                 path, iv, name = row
                 with open(path, "rb") as f: data = f.read()
@@ -70,8 +73,11 @@ class VaultFileManager:
             return None, None, None
         except Exception as e:
             return None, None, None
+        finally:
+            if conn: conn.close()
 
     def delete_file(self, file_id):
+        conn = None
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
@@ -80,7 +86,10 @@ class VaultFileManager:
             if row:
                 if os.path.exists(row[0]): os.remove(row[0])
                 cursor.execute("DELETE FROM AlMakhzan.dbo.Files WHERE file_id = ?", (file_id,))
-                conn.close()
                 return True
             return False
-        except: return False
+        except Exception as e:
+            print(f"❌ Delete Error: {e}")
+            return False
+        finally:
+            if conn: conn.close()

@@ -1,12 +1,21 @@
 from flask import request, jsonify
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+
+def get_client_ip():
+    """
+    Custom IP detection to handle IPv4/IPv6 localhost inconsistency.
+    Normalizes '::1' (IPv6 localhost) to '127.0.0.1'.
+    """
+    ip = request.remote_addr
+    if ip == '::1':
+        return '127.0.0.1'
+    return ip
 
 # Initialize limiter with the Sliding Window Counter strategy
 # This strategy is more accurate than fixed window as it smoothens out 
 # bursts at the edges of time windows.
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_client_ip,
     default_limits=["100 per 15 minutes"],
     strategy="sliding-window-counter",
     storage_uri="memory://",
