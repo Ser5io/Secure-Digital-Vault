@@ -8,6 +8,7 @@ from flask_cors import CORS
 from UserAuthenticator import UserAuthenticator
 from VaultFileManager import VaultFileManager
 from VaultCrypto import VaultCrypto 
+from SecurityMiddleware import setup_security, get_limiter
 
 import random
 import string
@@ -22,6 +23,10 @@ load_dotenv()
 app = Flask(__name__)
 # Enable CORS for the entire app to allow React to talk to Flask
 CORS(app, resources={r"/*": {"origins": "*"}}) 
+
+# Setup DoS mitigation and security configurations
+setup_security(app)
+limiter = get_limiter()
 
 app.config['SECRET_KEY'] = 'your_university_project_secret'
 app.config['EMAIL_USER'] = os.getenv('EMAIL_USER')
@@ -98,6 +103,7 @@ def health_check():
     return jsonify({"status": "Backend is online"})
 
 @app.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
 def register():
     data = request.get_json()
     print(f"📩 Received Register Request for: {data.get('username')}")
@@ -110,6 +116,7 @@ def register():
     return jsonify({"status": "error", "message": message}), 400
 
 @app.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     print(f"📩 Received Login Request for: {data.get('username')}")
@@ -138,6 +145,7 @@ def login():
     return jsonify({"status": "error", "message": message}), 401
 
 @app.route("/verify-mfa", methods=["POST"])
+@limiter.limit("5 per minute")
 def verify_mfa():
     data = request.get_json()
     uid = data.get("user_id")
