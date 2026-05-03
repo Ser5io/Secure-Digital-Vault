@@ -9,16 +9,79 @@ from UserAuthenticator import UserAuthenticator
 from VaultFileManager import VaultFileManager
 from VaultCrypto import VaultCrypto 
 
+import random
+import string
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
 # Enable CORS for the entire app to allow React to talk to Flask
 CORS(app, resources={r"/*": {"origins": "*"}}) 
 
 app.config['SECRET_KEY'] = 'your_university_project_secret'
+app.config['EMAIL_USER'] = os.getenv('EMAIL_USER')
+app.config['EMAIL_PASS'] = os.getenv('EMAIL_PASS')
 
 # Initialize modules
 auth = UserAuthenticator()
 file_manager = VaultFileManager()
 crypto = VaultCrypto()
+
+def generate_mfa_code():
+    return ''.join(random.choices(string.digits, k=6))
+
+def send_mfa_email(target_email, code):
+    """Implement the mailer function to send a real MFA code using Gmail SMTP."""
+    sender_email = app.config['EMAIL_USER']
+    sender_password = app.config['EMAIL_PASS']
+
+    if not sender_email or not sender_password:
+        print("❌ Email credentials not found in .env file!")
+        return False
+
+    # Create the email content
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Your Secure Vault Verification Code"
+    message["From"] = f"Secure Digital Vault <{sender_email}>"
+    message["To"] = target_email
+
+    text = f"Your verification code is: {code}\nThis code will expire in 10 minutes."
+    html = f"""
+    <html>
+      <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd;">
+          <h2 style="color: #2563eb; text-align: center;">🔐 Secure Digital Vault</h2>
+          <p>Hello,</p>
+          <p>Your verification code for logging into your vault is:</p>
+          <div style="background: #f8fafc; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1e293b; border-radius: 5px; margin: 20px 0;">
+            {code}
+          </div>
+          <p style="font-size: 12px; color: #64748b; text-align: center;">
+            This code will expire in 10 minutes. If you did not request this, please ignore this email.
+          </p>
+        </div>
+      </body>
+    </html>
+    """
+
+    message.attach(MIMEText(text, "plain"))
+    message.attach(MIMEText(html, "html"))
+
+    try:
+        # Connect to Gmail's SMTP server
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, target_email, message.as_string())
+        print(f"✅ Real Email sent successfully to {target_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
+        return False
 
 def get_uid_from_token():
     auth_header = request.headers.get("Authorization")
@@ -38,6 +101,7 @@ def health_check():
 def register():
     data = request.get_json()
     print(f"📩 Received Register Request for: {data.get('username')}")
+    # Pass email to register_user
     success, message = auth.register_user(data['username'], data.get('email', ''), data['password'])
     if success:
         print("✅ Registration successful")
@@ -50,12 +114,46 @@ def login():
     data = request.get_json()
     print(f"📩 Received Login Request for: {data.get('username')}")
     success, uid, message = auth.authenticate(data['username'], data['password'])
+    
     if success:
-        print(f"✅ Login successful for user {uid}")
+        email = auth.get_user_email(uid)
+        if not email:
+            return jsonify({"status": "error", "message": "User email not found. Cannot proceed with MFA."}), 400
+        
+        code = generate_mfa_code()
+        if auth.store_mfa_code(uid, code):
+            if send_mfa_email(email, code):
+                print(f"✅ MFA Code sent for user {uid}")
+                return jsonify({
+                    "status": "mfa_required", 
+                    "user_id": uid, 
+                    "message": "Verification code sent to your email"
+                })
+            else:
+                return jsonify({"status": "error", "message": "Failed to send verification email. Check SMTP settings."}), 500
+        else:
+            return jsonify({"status": "error", "message": "Failed to generate MFA code"}), 500
+            
+    print(f"❌ Login failed: {message}")
+    return jsonify({"status": "error", "message": message}), 401
+
+@app.route("/verify-mfa", methods=["POST"])
+def verify_mfa():
+    data = request.get_json()
+    uid = data.get("user_id")
+    code = data.get("code")
+    
+    if not uid or not code:
+        return jsonify({"status": "error", "message": "Missing user_id or code"}), 400
+    
+    success, message = auth.verify_mfa_code(uid, code)
+    if success:
+        print(f"✅ MFA Verification successful for user {uid}")
         token = jwt.encode({'user_id': uid, 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)}, 
                            app.config['SECRET_KEY'])
         return jsonify({"status": "success", "token": token, "user_id": uid})
-    print(f"❌ Login failed: {message}")
+    
+    print(f"❌ MFA Verification failed for user {uid}: {message}")
     return jsonify({"status": "error", "message": message}), 401
 
 @app.route("/files", methods=["GET"])

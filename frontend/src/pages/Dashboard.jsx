@@ -32,7 +32,14 @@ export default function Dashboard() {
 
   async function handleUpload() {
     if (!file || !password) {
-      alert("❌ Please select a file AND enter your password for encryption!");
+      window.alert("❌ Please select a file AND enter your password for encryption!");
+      return;
+    }
+
+    // Task 2: Password Validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      window.alert("❌ Password must be at least 8 characters long, contain at least one uppercase letter and one number!");
       return;
     }
 
@@ -62,10 +69,10 @@ export default function Dashboard() {
         
         fetchFiles(); // Refresh list
       } else {
-        alert("❌ Upload failed!");
+        window.alert("❌ Upload failed!");
       }
     } catch (err) {
-      alert("❌ Connection error.");
+      window.alert("❌ Connection error.");
     } finally {
       setTimeout(() => {
         setLoading(false);
@@ -75,7 +82,7 @@ export default function Dashboard() {
   }
 
   async function handleDownload(fileId, fileName) {
-    const pass = prompt("Enter your Vault Password to decrypt this file:");
+    const pass = window.prompt("Enter your Vault Password to decrypt this file:");
     if (!pass) return;
 
     try {
@@ -96,15 +103,15 @@ export default function Dashboard() {
         a.download = fileName;
         a.click();
       } else {
-        alert("❌ Decryption failed. Incorrect password?");
+        window.alert("❌ Decryption failed. Incorrect password?");
       }
     } catch (err) {
-      alert("❌ Download error.");
+      window.alert("❌ Download error.");
     }
   }
 
   async function handleDelete(fileId) {
-    if (!confirm("Are you sure you want to delete this file permanently?")) return;
+    if (!window.confirm("Are you sure you want to delete this file permanently?")) return;
 
     try {
       const response = await fetch(`http://localhost:5000/delete/${fileId}`, {
@@ -113,11 +120,11 @@ export default function Dashboard() {
       });
 
       if (response.ok) {
-        alert("✅ File deleted.");
+        window.alert("✅ File deleted.");
         fetchFiles(); // Refresh
       }
     } catch (err) {
-      alert("❌ Delete failed.");
+      window.alert("❌ Delete failed.");
     }
   }
 

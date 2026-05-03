@@ -1,5 +1,6 @@
 import bcrypt
 import pyodbc  # Standard driver for SQL Server (T-SQL)
+import datetime
 
 class UserAuthenticator:
     def __init__(self, connection_string=None):
@@ -34,8 +35,48 @@ class UserAuthenticator:
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         try:
-            self.cursor.execute("{CALL AlMakhzan.dbo.sp_RegisterUser (?, ?)}", (username, hashed_password.decode('utf-8')))
+            self.cursor.execute("{CALL AlMakhzan.dbo.sp_RegisterUser (?, ?, ?)}", (username, email, hashed_password.decode('utf-8')))
             return True, "Success"
+        except Exception as e:
+            return False, str(e)
+
+    def get_user_email(self, user_id):
+        if not self.cursor: return None
+        self.cursor.execute("SELECT email FROM AlMakhzan.dbo.Users WHERE id = ?", (user_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
+
+    def store_mfa_code(self, user_id, code):
+        if not self.cursor: return False
+        try:
+            # Delete old codes for this user
+            self.cursor.execute("DELETE FROM AlMakhzan.dbo.MFA_Codes WHERE user_id = ?", (user_id,))
+            # Store new code with 10 min expiry
+            expiry = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            self.cursor.execute("INSERT INTO AlMakhzan.dbo.MFA_Codes (user_id, code, expires_at) VALUES (?, ?, ?)",
+                                (user_id, code, expiry))
+            return True
+        except Exception as e:
+            print(f"❌ Error storing MFA code: {e}")
+            return False
+
+    def verify_mfa_code(self, user_id, code):
+        if not self.cursor: return False, "No connection"
+        try:
+            self.cursor.execute("SELECT code, expires_at FROM AlMakhzan.dbo.MFA_Codes WHERE user_id = ?", (user_id,))
+            result = self.cursor.fetchone()
+            if not result: return False, "Code not found"
+            
+            stored_code, expires_at = result
+            if datetime.datetime.now() > expires_at:
+                return False, "Code expired"
+            
+            if stored_code == code:
+                # Delete code after successful verification
+                self.cursor.execute("DELETE FROM AlMakhzan.dbo.MFA_Codes WHERE user_id = ?", (user_id,))
+                return True, "Success"
+            else:
+                return False, "Invalid code"
         except Exception as e:
             return False, str(e)
 

@@ -8,7 +8,7 @@ export default function Register() {
   async function handleRegister() {
     // 1. Validation: Prevent empty entries
     if (!username.trim() || !password.trim()) {
-      alert("❌ Please fill in all fields!");
+      window.alert("❌ Please fill in all fields!");
       return;
     }
 
@@ -23,14 +23,14 @@ export default function Register() {
       const data = await response.json();
 
       if (response.ok && data.status === "success") {
-        alert("✅ Account created successfully!");
+        window.alert("✅ Account created successfully!");
         window.location.href = "/"; // Go to login page
       } else {
         // 3. Show specific error (e.g. "the username is used")
-        alert("❌ " + (data.message || "Registration failed"));
+        window.alert("❌ " + (data.message || "Registration failed"));
       }
     } catch (err) {
-      alert("❌ Cannot connect to server. Ensure VaultBackend.py is running!");
+      window.alert("❌ Cannot connect to server. Ensure VaultBackend.py is running!");
     }
   }
 
