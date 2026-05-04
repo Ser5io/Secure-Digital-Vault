@@ -86,9 +86,6 @@ This script simulates concurrent login attempts to verify that the **Sliding Win
 
 ---
 
-## 👥 Contributors
--   **Senior Security Engineer**: Gemini CLI
--   **Full-Stack Developer**: Yousef
 
 ---
 
